@@ -9,7 +9,7 @@ enum {
     LED_ERROR,
 };
 
-void led_set(uint8_t type, uint8_t value);
+void led_set(uint8_t type);
 void led_init(void);
 
 #endif

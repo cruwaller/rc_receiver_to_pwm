@@ -343,6 +343,9 @@ static FAST_CODE_1 void main_loop(void)
 #endif
   uint16_t channels[NUM_CHANNELS];
   uint8_t data;
+
+  led_set(LED_READY);
+
   while (1) {
     if (uart_receive_timeout(&data, 1, 1) == UART_OK) {
       if (parser(data)) {
@@ -464,6 +467,7 @@ void Error_Handler(void)
 {
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+  led_set(LED_READY);
   while (1) {}
 }
 
