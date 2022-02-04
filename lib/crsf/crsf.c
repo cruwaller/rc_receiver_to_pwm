@@ -132,18 +132,18 @@ FAST_CODE_1 void crsf_get_rc_data(uint16_t * const rc_data, uint8_t len)
 #if PROTO_ELRS
     for (iter = 0; iter < 4 && iter < ARRAY_SIZE(_channels); iter++) {
         // 10b -> 11b
-#if (ANALOG_MAX != 2047)
+#if (SERVO_OUT_US_MAX != 2047)
         rc_data[iter] = MAP_U16(_channels[iter],
-            ELRS_MIN, ELRS_MAX, ANALOG_MIN, ANALOG_MAX);
+            ELRS_MIN, ELRS_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
 #else
         rc_data[iter] = _channels[iter] << 1;
 #endif
     }
     for (; iter < len && iter < ARRAY_SIZE(_channels); iter++) {
         // 3b -> 11b
-#if (ANALOG_MAX != 2047)
+#if (SERVO_OUT_US_MAX != 2047)
         rc_data[iter] = MAP_U16(_channels[iter],
-            ELRS_SWITCH_MIN, ELRS_SWITCH_MAX, ANALOG_MIN, ANALOG_MAX);
+            ELRS_SWITCH_MIN, ELRS_SWITCH_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
 #else
         rc_data[iter] = 292 * _channels[iter];
 #endif
@@ -151,7 +151,7 @@ FAST_CODE_1 void crsf_get_rc_data(uint16_t * const rc_data, uint8_t len)
 #else
     for (iter = 0; iter < len && iter < ARRAY_SIZE(_channels); iter++) {
         rc_data[iter] = MAP_U16(_channels[iter],
-            CRSF_MIN, CRSF_MAX, ANALOG_MIN, ANALOG_MAX);
+            CRSF_MIN, CRSF_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
     }
 #endif
 }

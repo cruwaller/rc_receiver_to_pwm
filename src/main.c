@@ -31,6 +31,7 @@
 #include "defines.h"
 #include <string.h>
 
+
 /* Private includes ----------------------------------------------------------*/
 
 /* Private typedef -----------------------------------------------------------*/
@@ -277,7 +278,7 @@ Servo_attach(TIM_HandleTypeDef *handle, uint16_t pin, uint8_t ch, uint8_t af)
 
   GPIO_Setup(pin, af, 0);
   // Init PWM output and set it to middle
-  TIMx_Channel_Init(handle, ch, US_OUT_MID);
+  TIMx_Channel_Init(handle, ch, SERVO_OUT_US_MID);
   return (struct pwm_pin){.handle = handle, .channel = ch};
 }
 
@@ -285,7 +286,7 @@ Servo_attach(TIM_HandleTypeDef *handle, uint16_t pin, uint8_t ch, uint8_t af)
 static FAST_CODE_1 void Servo_writeMicroseconds(struct pwm_pin pin, uint32_t us)
 {
   /* limit input to range */
-  //us = (us < US_OUT_MIN) ? US_OUT_MIN : (US_OUT_MAX < us) ? US_OUT_MAX : us;
+  //us = (us < SERVO_OUT_US_MIN) ? SERVO_OUT_US_MIN : (SERVO_OUT_US_MAX < us) ? SERVO_OUT_US_MAX : us;
   // set channel...
   __HAL_TIM_SET_COMPARE(pin.handle, pin.channel, us);
 }
@@ -316,12 +317,15 @@ static void pwm_output_configure(void)
 #endif
 }
 
-
 static FAST_CODE_1 void pwm_output_set(uint16_t * rc_data, uint8_t len)
 {
-  uint8_t iter;
-  for (iter = 0; iter < len; iter++) {
-    Servo_writeMicroseconds(pwm_pins[iter], rc_data[iter]);
+  static uint32_t pwm_adjustment_done_ms;
+  uint32_t const now_ms = HAL_GetTick();
+  if ((now_ms - pwm_adjustment_done_ms) < SERVO_UPDATE_INTERVAL_MS)
+    return;
+  pwm_adjustment_done_ms = now_ms;
+  while (len--) {
+    Servo_writeMicroseconds(pwm_pins[len], rc_data[len]);
   }
 }
 
@@ -363,7 +367,16 @@ static void copy_functions_to_ram(void)
   extern uint8_t ram_code_start;
   extern uint8_t ram_code_end;
   extern uint8_t ram_code;
-  memcpy(&ram_code_start, &ram_code, (size_t) (&ram_code_end - &ram_code_start));
+  /* Copy only if address is different */
+  if (&ram_code != &ram_code_start)
+    memcpy(&ram_code_start, &ram_code, (size_t) (&ram_code_end - &ram_code_start));
+
+  /* Make sure the vectors are set correctly */
+#if STM32F0
+  LL_SYSCFG_SetRemapMemory(LL_SYSCFG_REMAP_SRAM);
+#else
+  SCB->VTOR = BL_FLASH_START;
+#endif
 }
 
 
@@ -418,8 +431,8 @@ static void SystemClock_Config(void)
   * in the RCC_OscInitTypeDef structure.
   */
 #if STM32F0
-  /* No HSE, Activate PLL with HSI/2 as source */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_NONE;
+  /* 8MHz HSI, Activate PLL with HSI as source, MUL6 -> 6*8MHz = 48MHz */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
@@ -436,21 +449,19 @@ static void SystemClock_Config(void)
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-#if STM32F0
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
-#elif STM32F1
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+#if STM32F1
   RCC_ClkInitStruct.ClockType |= RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
   FLatency = FLASH_LATENCY_2;
 #endif
-
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLatency) != HAL_OK) {
     Error_Handler();
   }

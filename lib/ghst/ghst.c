@@ -115,10 +115,10 @@ FAST_CODE_1 void ghst_get_rc_data(uint16_t * const rc_data, uint8_t len)
     uint8_t iter;
     for (iter = 0; iter < 4 && iter < ARRAY_SIZE(_channels); iter++) {
         rc_data[iter] = MAP_U16(_channels[iter],
-            GHST_MIN, GHST_MAX, ANALOG_MIN, ANALOG_MAX);
+            GHST_MIN, GHST_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
     }
     for (; iter < len && iter < ARRAY_SIZE(_channels); iter++) {
         rc_data[iter] = MAP_U16(_channels[iter],
-            GHST_SWITCH_MIN, GHST_SWITCH_MAX, ANALOG_MIN, ANALOG_MAX);
+            GHST_SWITCH_MIN, GHST_SWITCH_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
     }
 }

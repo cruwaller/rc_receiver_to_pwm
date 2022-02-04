@@ -11,7 +11,7 @@ _Min_Stack_Size = 0x400;   /* required amount of stack */
 /* Define output sections */
 SECTIONS
 {
-  /* Critical program code goes into RAM_CODE */
+  /* Critical program code goes into VECTOR_BASE */
   ram_code = LOADADDR(.ram_code);
   .ram_code :
   {
@@ -24,7 +24,7 @@ SECTIONS
     *(*HAL_Delay*)
     . = ALIGN(4);
     ram_code_end = .;
-  } >RAM_CODE AT> FLASH
+  } >VECTOR_BASE AT> FLASH
 
   /* The program code and other data goes into FLASH */
   .text :

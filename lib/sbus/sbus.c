@@ -50,6 +50,6 @@ FAST_CODE_1 void sbus_get_rc_data(uint16_t * const rc_data, uint8_t len)
     uint8_t iter;
     for (iter = 0; iter < len && iter < ARRAY_SIZE(_channels); iter++) {
         rc_data[iter] = MAP_U16(_channels[iter],
-            SBUS_MIN, SBUS_MAX, ANALOG_MIN, ANALOG_MAX);
+            SBUS_MIN, SBUS_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
     }
 }

@@ -33,7 +33,7 @@ extern "C" {
 #include "stm32f0xx_hal.h"
 #include "stm32f0xx_ll_gpio.h"
 #include "stm32f0xx_ll_usart.h"
-
+#include "stm32f0xx_ll_system.h"
 #define NVIC_EncodePriority(x, y, z) y
 
 #elif STM32F1
@@ -55,16 +55,23 @@ extern "C" {
 void Error_Handler(void);
 
 /* Private defines -----------------------------------------------------------*/
-// Connection is half duplex
-#define RECEIVER_UART_TX GPIO('A', 9)
-#define RECEIVER_UART_RX RECEIVER_UART_TX
+#if defined(UART_TX)
+#define RECEIVER_UART_TX IO_CREATE(UART_TX)
+#else
+#define RECEIVER_UART_TX -1
+#endif
+#if defined(UART_RX)
+#define RECEIVER_UART_RX IO_CREATE(UART_RX)
+#else
+#define RECEIVER_UART_RX -1
+#endif
+#if !defined(UART_RX) && !defined(UART_TX)
+#error "Invalid UART configuration!"
+#endif
 
-//#define RECEIVER_UART_TX GPIO('A', 2)
-//#define RECEIVER_UART_RX GPIO('A', 3)
 
 typedef uint8_t (*parse_byte_func_t)(uint8_t inChar);
 typedef void (*get_rc_data_func_t)(uint16_t * const rc_data, uint8_t len);
-
 
 
 enum {

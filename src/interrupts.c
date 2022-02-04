@@ -18,7 +18,7 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "stm32f1xx_it.h"
+#include "interrupts.h"
 #include "defines.h"
 
 /* Private includes ----------------------------------------------------------*/

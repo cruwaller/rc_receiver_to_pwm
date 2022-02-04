@@ -89,6 +89,12 @@ void usart_pin_config(uint32_t pin, uint8_t isrx)
     // USART1 is AF0
     fn = GPIO_FUNCTION(0);
   }
+#elif STM32F0
+  uint32_t fn = GPIO_FUNCTION(1);
+  if (pin == GPIO('B', 6) || pin == GPIO('B', 7)) {
+    // USART1 is AF0
+    fn = GPIO_FUNCTION(0);
+  }
 #else
   uint32_t fn = GPIO_FUNCTION(7);
 #endif
@@ -407,9 +413,26 @@ static void usart_hw_init(USART_TypeDef *USARTx, uint32_t baud, uint32_t flags, 
 }
 
 
-static uint8_t uart_valid_pin_tx(uint32_t pin)
+static uint8_t uart_valid_pin_tx(int32_t pin, uint8_t * swapped)
 {
+  if (swapped)
+    *swapped = 0;
+
   switch (pin) {
+#if defined(LL_USART_TXRX_SWAPPED)
+    case GPIO('A', 3):
+    case GPIO('A', 10):
+    case GPIO('A', 15):
+    case GPIO('B', 4):
+    case GPIO('B', 7):
+    case GPIO('B', 8):
+    case GPIO('B', 11):
+    case GPIO('C', 5):
+    case GPIO('C', 11):
+      if (swapped)
+        *swapped = 1;
+      return 1;
+#endif
     case GPIO('A', 2):
     case GPIO('A', 9):
     case GPIO('A', 14):
@@ -425,7 +448,7 @@ static uint8_t uart_valid_pin_tx(uint32_t pin)
 }
 
 
-static USART_TypeDef * uart_peripheral_get(uint32_t pin)
+static USART_TypeDef * uart_peripheral_get(int32_t pin)
 {
   switch (pin) {
     case GPIO('A', 9):
@@ -463,28 +486,28 @@ static USART_TypeDef * uart_peripheral_get(uint32_t pin)
  * @param None
  * @retval None
  */
-void uart_init(uint32_t baud, uint32_t pin_rx, uint32_t pin_tx)
+void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx)
 {
   USART_TypeDef * uart_ptr = uart_peripheral_get(pin_tx);
   USART_TypeDef * uart_ptr_rx = uart_ptr;
+  uint8_t halfduplex, swapped = 0;
+
+  if (!uart_ptr || !uart_valid_pin_tx(pin_tx, &swapped)) {
+    Error_Handler();
+  }
 
   // No RX pin or same as TX pin == half duplex
-  uint8_t halfduplex = ((!pin_rx) || (pin_rx == pin_tx));
+  halfduplex = ((pin_rx < 0) || (pin_rx == pin_tx));
 
   UART_CR_RX = UART_DR_RX;
   UART_CR_TX = UART_DR_TX;
 
-  if (!uart_ptr) {
-    Error_Handler();
-  }
-
-  if (pin_rx) {
+  if (0 <= pin_rx) {
     uart_ptr_rx = uart_peripheral_get(pin_rx);
     if (uart_ptr_rx && uart_ptr_rx != uart_ptr) {
       /* RX USART peripheral is not same as TX USART */
-      usart_hw_init(uart_ptr_rx, baud, UART_CR_RX, uart_valid_pin_tx(pin_rx));
+      usart_hw_init(uart_ptr_rx, baud, UART_CR_RX, uart_valid_pin_tx(pin_rx, NULL));
       /* Set TX to half duplex and always enabled */
-      //halfduplex = 1;
       UART_CR_RX = UART_FLAGS | USART_CR1_TE;
     } else {
       // full duplex
@@ -507,6 +530,15 @@ void uart_init(uint32_t baud, uint32_t pin_rx, uint32_t pin_tx)
   /* TX USART peripheral config */
   usart_hw_init(uart_ptr, baud, 0, halfduplex);
 
+#if defined(LL_USART_TXRX_SWAPPED)
+  /* F3 can swap Rx and Tx pins */
+  if (swapped) {
+    LL_USART_SetTXRXSwap(uart_ptr, LL_USART_TXRX_SWAPPED);
+    if (uart_ptr_rx != uart_ptr)
+      LL_USART_SetTXRXSwap(uart_ptr_rx, LL_USART_TXRX_SWAPPED);
+  }
+#endif
+
   /* Enable RX by default */
   duplex_state_set(DUPLEX_RX);
 
@@ -526,9 +558,9 @@ void uart_init(uint32_t baud, uint32_t pin_rx, uint32_t pin_tx)
  }
 
   /* TX pin */
-  usart_pin_config(pin_tx, 0);
+  usart_pin_config(pin_tx, halfduplex);
   /* RX pin */
-  if (pin_rx)
+  if (0 <= pin_rx)
     usart_pin_config(pin_rx, 1);
 }
 
