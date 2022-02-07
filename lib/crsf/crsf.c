@@ -126,7 +126,7 @@ FAST_CODE_1 uint8_t crsf_parse_byte(uint8_t inChar)
 }
 
 
-FAST_CODE_1 void crsf_get_rc_data(uint16_t * const rc_data, uint8_t len)
+FAST_CODE_1 void crsf_get_rc_data(uint16_t * const rc_data, uint8_t const len)
 {
     uint8_t iter;
 #if PROTO_ELRS
@@ -148,7 +148,15 @@ FAST_CODE_1 void crsf_get_rc_data(uint16_t * const rc_data, uint8_t len)
         rc_data[iter] = 292 * _channels[iter];
 #endif
     }
+
+#elif UPPER_CHANNELS_N_TO_MAX
+    /* Channels N...16 */
+    for (iter = NUM_CHANNELS; iter < (len + NUM_CHANNELS) && iter < ARRAY_SIZE(_channels); iter++) {
+        rc_data[iter - NUM_CHANNELS] = MAP_U16(_channels[iter],
+            CRSF_MIN, CRSF_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
+    }
 #else
+    /* Channels 0...N */
     for (iter = 0; iter < len && iter < ARRAY_SIZE(_channels); iter++) {
         rc_data[iter] = MAP_U16(_channels[iter],
             CRSF_MIN, CRSF_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);

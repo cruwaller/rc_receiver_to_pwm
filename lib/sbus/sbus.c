@@ -45,11 +45,18 @@ FAST_CODE_1 uint8_t sbus_parse_byte(uint8_t inChar)
     return 1;
 }
 
-FAST_CODE_1 void sbus_get_rc_data(uint16_t * const rc_data, uint8_t len)
+FAST_CODE_1 void sbus_get_rc_data(uint16_t * const rc_data, uint8_t const len)
 {
     uint8_t iter;
+#if UPPER_CHANNELS_N_TO_MAX
+    for (iter = NUM_CHANNELS; iter < (len + NUM_CHANNELS) && iter < ARRAY_SIZE(_channels); iter++) {
+        rc_data[iter - NUM_CHANNELS] = MAP_U16(_channels[iter],
+            SBUS_MIN, SBUS_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
+    }
+#else
     for (iter = 0; iter < len && iter < ARRAY_SIZE(_channels); iter++) {
         rc_data[iter] = MAP_U16(_channels[iter],
             SBUS_MIN, SBUS_MAX, SERVO_OUT_US_MIN, SERVO_OUT_US_MAX);
     }
+#endif
 }

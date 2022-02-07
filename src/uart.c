@@ -411,6 +411,9 @@ static void usart_hw_init(USART_TypeDef *USARTx, uint32_t baud, uint32_t flags, 
   LL_USART_ConfigAsyncMode(USARTx);
   if (halfduplex)
     LL_USART_EnableHalfDuplex(USARTx);
+#if PROTO_SBUS
+  LL_USART_SetStopBitsLength(USARTx, LL_USART_STOPBITS_2);
+#endif
   USARTx->CR1 = flags;
 }
 
@@ -520,7 +523,6 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx)
   }
 
 #if PROTO_SBUS
-  uart_ptr->CR2 |= LL_USART_STOPBITS_2;
   UART_CR_RX |= LL_USART_PARITY_EVEN;
   UART_CR_TX |= LL_USART_PARITY_EVEN;
 #endif

@@ -51,45 +51,72 @@ jobs:
           draft: false
           prerelease: false
 
-      - name: Upload Binaries, CRSF
+      - name: Upload Binaries, CRSF 1-8
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
-          asset_path: ./.pio/build/PWM_CRSF/firmware.bin
-          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_CRSF.bin
+          asset_path: ./.pio/build/PWM_CRSF_CH1toCH8/firmware.bin
+          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_CRSF_CH1toCH8.bin
+          asset_content_type: application/octet-stream
+      - name: Upload Binaries, CRSF 9-16
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
+          asset_path: ./.pio/build/PWM_CRSF_CH9toCH16/firmware.bin
+          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_CRSF_CH9toCH16.bin
           asset_content_type: application/octet-stream
 
-      - name: Upload Binaries, SBUS
+      - name: Upload Binaries, SBUS 1-8
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
-          asset_path: ./.pio/build/PWM_SBUS/firmware.bin
-          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_SBUS.bin
+          asset_path: ./.pio/build/PWM_SBUS_CH1toCH8/firmware.bin
+          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_SBUS_CH1toCH8.bin
+          asset_content_type: application/octet-stream
+      - name: Upload Binaries, SBUS 9-16
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
+          asset_path: ./.pio/build/PWM_SBUS_CH9toCH16/firmware.bin
+          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_SBUS_CH9toCH16.bin
           asset_content_type: application/octet-stream
 
-      - name: Upload Binaries, GHST
+      - name: Upload Binaries, GHST 1-8
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
-          asset_path: ./.pio/build/PWM_GHST/firmware.bin
-          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_GHST.bin
+          asset_path: ./.pio/build/PWM_GHST_CH1toCH8/firmware.bin
+          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_GHST_CH1toCH8.bin
+          asset_content_type: application/octet-stream
+      - name: Upload Binaries, GHST 9-16
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
+          asset_path: ./.pio/build/PWM_GHST_CH9toCH16/firmware.bin
+          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_GHST_CH9toCH16.bin
           asset_content_type: application/octet-stream
 
-      - name: Upload Binaries, ELRS
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above
-          asset_path: ./.pio/build/PWM_ELRS/firmware.bin
-          asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_ELRS.bin
-          asset_content_type: application/octet-stream
+      #- name: Upload Binaries, ELRS
+      #  uses: actions/upload-release-asset@v1
+      #  env:
+      #    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #  with:
+      #    upload_url: ${{ steps.create_release.outputs.upload_url }}
+      #    asset_path: ./.pio/build/PWM_ELRS/firmware.bin
+      #    asset_name: release_${{ steps.get_version.outputs.SOURCE_TAG }}_PWM_ELRS.bin
+      #    asset_content_type: application/octet-stream
 
       - name: Upload Sources
         id: upload-release-asset
