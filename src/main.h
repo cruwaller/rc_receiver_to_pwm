@@ -31,6 +31,7 @@ extern "C" {
 #if STM32F0
 #include "stm32f0xx.h"
 #include "stm32f0xx_hal.h"
+#include "stm32f0xx_ll_rcc.h"
 #include "stm32f0xx_ll_gpio.h"
 #include "stm32f0xx_ll_usart.h"
 #include "stm32f0xx_ll_system.h"

@@ -188,9 +188,13 @@ static void GPIO_SetupPin(GPIO_TypeDef *regs, uint32_t pos, uint32_t mode, int p
     regs->BSRR = 1 << (pos + 16);
 #else
   uint32_t const bit_pos = 0x1 << pos;
+  if (0 > pullup) pullup = LL_GPIO_PULL_DOWN;
+  else if (0 < pullup) pullup = LL_GPIO_PULL_UP;
+  else pullup = LL_GPIO_PULL_NO;
+
   if (mode == GPIO_INPUT) {
     LL_GPIO_SetPinMode(regs, bit_pos, LL_GPIO_MODE_INPUT);
-    LL_GPIO_SetPinPull(regs, bit_pos, (0 < pullup ? LL_GPIO_PULL_UP : LL_GPIO_PULL_DOWN));
+    LL_GPIO_SetPinPull(regs, bit_pos, pullup);
   } else if (mode == GPIO_OUTPUT) {
     LL_GPIO_SetPinMode(regs, bit_pos, LL_GPIO_MODE_OUTPUT);
     LL_GPIO_SetPinOutputType(regs, bit_pos, LL_GPIO_OUTPUT_PUSHPULL);
@@ -199,7 +203,8 @@ static void GPIO_SetupPin(GPIO_TypeDef *regs, uint32_t pos, uint32_t mode, int p
   } else {
     mode = (mode >> 4) & 0xff;
     LL_GPIO_SetPinMode(regs, bit_pos, LL_GPIO_MODE_ALTERNATE);
-    LL_GPIO_SetPinPull(regs, bit_pos, (0 < pullup ? LL_GPIO_PULL_UP : LL_GPIO_PULL_DOWN));
+    LL_GPIO_SetPinPull(regs, bit_pos, pullup);
+    LL_GPIO_SetPinSpeed(regs, bit_pos, LL_GPIO_SPEED_FREQ_HIGH);
     if (pos & 0x8) {
       LL_GPIO_SetAFPin_8_15(regs, bit_pos, mode);
     } else {
@@ -272,13 +277,12 @@ struct pwm_pin {
 
 
 struct pwm_pin
-Servo_attach(TIM_HandleTypeDef *handle, uint16_t pin, uint8_t ch, uint8_t af)
+Servo_attach(TIM_HandleTypeDef *handle, uint16_t pin, uint8_t ch, uint8_t af, uint16_t outval)
 {
   ch = ch << 2;
-
   GPIO_Setup(pin, af, 0);
-  // Init PWM output and set it to middle
-  TIMx_Channel_Init(handle, ch, SERVO_OUT_US_MID);
+  // Init PWM output
+  TIMx_Channel_Init(handle, ch, outval);
   return (struct pwm_pin){.handle = handle, .channel = ch};
 }
 
@@ -301,21 +305,22 @@ static void pwm_output_configure(void)
 {
 #if STM32F0
   servo_timer_init(&tim2_handle, TIM2);
-  pwm_pins[0] = Servo_attach(&tim2_handle, GPIO('A', 0), 0, GPIO_FUNCTION(2));
-  pwm_pins[1] = Servo_attach(&tim2_handle, GPIO('A', 1), 1, GPIO_FUNCTION(2));
-  pwm_pins[2] = Servo_attach(&tim2_handle, GPIO('A', 2), 2, GPIO_FUNCTION(2));
-  pwm_pins[3] = Servo_attach(&tim2_handle, GPIO('A', 3), 3, GPIO_FUNCTION(2));
+  pwm_pins[0] = Servo_attach(&tim2_handle, GPIO('A', 0), 0, GPIO_FUNCTION(2), SERVO_OUT_US_MIN);
+  pwm_pins[1] = Servo_attach(&tim2_handle, GPIO('A', 1), 1, GPIO_FUNCTION(2), SERVO_OUT_US_MID);
+  pwm_pins[2] = Servo_attach(&tim2_handle, GPIO('A', 2), 2, GPIO_FUNCTION(2), SERVO_OUT_US_MID);
+  pwm_pins[3] = Servo_attach(&tim2_handle, GPIO('A', 3), 3, GPIO_FUNCTION(2), SERVO_OUT_US_MID);
 
   servo_timer_init(&tim3_handle, TIM3);
-  pwm_pins[4] = Servo_attach(&tim3_handle, GPIO('A', 6), 0, GPIO_FUNCTION(1));
-  pwm_pins[5] = Servo_attach(&tim3_handle, GPIO('A', 7), 1, GPIO_FUNCTION(1));
-  pwm_pins[6] = Servo_attach(&tim3_handle, GPIO('B', 0), 2, GPIO_FUNCTION(1));
-  pwm_pins[7] = Servo_attach(&tim3_handle, GPIO('B', 1), 3, GPIO_FUNCTION(1));
+  pwm_pins[4] = Servo_attach(&tim3_handle, GPIO('A', 6), 0, GPIO_FUNCTION(1), SERVO_OUT_US_MID);
+  pwm_pins[5] = Servo_attach(&tim3_handle, GPIO('A', 7), 1, GPIO_FUNCTION(1), SERVO_OUT_US_MID);
+  pwm_pins[6] = Servo_attach(&tim3_handle, GPIO('B', 0), 2, GPIO_FUNCTION(1), SERVO_OUT_US_MID);
+  pwm_pins[7] = Servo_attach(&tim3_handle, GPIO('B', 1), 3, GPIO_FUNCTION(1), SERVO_OUT_US_MID);
 
 #elif STM32F1
 #error "PWM timer config is not valid yet!"
 #endif
 }
+
 
 static FAST_CODE_1 void pwm_output_set(uint16_t * rc_data, uint8_t len)
 {
@@ -351,7 +356,7 @@ static FAST_CODE_1 void main_loop(void)
   led_set(LED_READY);
 
   while (1) {
-    if (uart_receive_timeout(&data, 1, 1) == UART_OK) {
+    if (uart_receive_timeout(&data, 1, 5) == UART_OK) {
       if (parser(data)) {
         get_rc(channels, ARRAY_SIZE(channels));
         pwm_output_set(channels, ARRAY_SIZE(channels));
@@ -386,7 +391,10 @@ static void copy_functions_to_ram(void)
   */
 int main(void)
 {
-  copy_functions_to_ram();
+#if DEBUG_BUILD
+  //__asm__("BKPT");
+#endif
+  //copy_functions_to_ram();
 
   /* MCU Configuration--------------------------------------------------------*/
 #if STM32F1
@@ -394,6 +402,7 @@ int main(void)
 #endif
   __HAL_RCC_PWR_CLK_ENABLE();
   //__HAL_AFIO_REMAP_SWJ_DISABLE();
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
 
     /* Init DWT if present */
 #ifdef DWT_BASE
@@ -401,6 +410,7 @@ int main(void)
         Error_Handler();
     }
 #endif
+  __enable_irq();
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
   HAL_Init();
@@ -408,6 +418,14 @@ int main(void)
   SystemClock_Config();
 
   led_init();
+
+  uint8_t state = 0;
+  uint8_t cnt = 10;
+  while (cnt--) {
+    HAL_Delay(150);
+    led_set(state ? LED_READY : LED_ERROR);
+    state ^= 1;
+  }
 
   // UART init
   uart_init(RX_BAUDRATE, RECEIVER_UART_RX, RECEIVER_UART_TX);
@@ -425,6 +443,7 @@ static void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
   uint32_t FLatency = FLASH_LATENCY_1;
 
   /** Initializes the RCC Oscillators according to the specified parameters
@@ -433,8 +452,13 @@ static void SystemClock_Config(void)
 #if STM32F0
   /* 8MHz HSI, Activate PLL with HSI as source, MUL6 -> 6*8MHz = 48MHz */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.HSEState = RCC_HSE_OFF;
+  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.HSI14State = RCC_HSI14_OFF;
+  RCC_OscInitStruct.LSIState = RCC_LSI_OFF;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
+  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI; // Source is HSI / 2
   RCC_OscInitStruct.PLL.PREDIV = RCC_PREDIV_DIV1;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL12;
 #elif STM32F1
@@ -456,7 +480,7 @@ static void SystemClock_Config(void)
                               |RCC_CLOCKTYPE_PCLK1;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
-  RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
+  RCC_ClkInitStruct.APB1CLKDivider = RCC_CFGR_PPRE_DIV1;
 #if STM32F1
   RCC_ClkInitStruct.ClockType |= RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV2;
@@ -465,6 +489,14 @@ static void SystemClock_Config(void)
   if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLatency) != HAL_OK) {
     Error_Handler();
   }
+
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1;
+  PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK) {
+    Error_Handler();
+  }
+
+  HAL_ResumeTick();
 
   SystemCoreClockUpdate();
 }
@@ -478,7 +510,7 @@ void Error_Handler(void)
 {
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
-  led_set(LED_READY);
+  led_set(LED_ERROR);
   while (1) {}
 }
 

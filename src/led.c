@@ -18,21 +18,8 @@ struct gpio_pin led2;
 
 void led_set(uint8_t const type)
 {
-    switch (type) {
-    case LED_BOOTING:
-        LED1_SET(0);
-        LED2_SET(0);
-        break;
-    case LED_READY:
-        LED1_SET(1);
-        break;
-    case LED_ERROR:
-        LED1_SET(1);
-        LED2_SET(1);
-        break;
-    default:
-        break;
-    }
+    LED1_SET((type & 0b01) == 0b01);
+    LED2_SET((type & 0b10) == 0b10);
 }
 
 

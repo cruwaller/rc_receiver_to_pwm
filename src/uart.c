@@ -167,10 +167,11 @@ FAST_CODE_1 void uart_flush(void)
 
 FAST_CODE_1 void USARTx_IRQ_handler(USART_TypeDef * uart)
 {
-  uint32_t SR = uart->StatReg, CR = uart->CR1;
+  uint32_t const SR = uart->StatReg;
+  uint32_t const CR = uart->CR1;
   /* Check for RX data */
   if (SR & RX_ISR_LST) {
-    uint8_t data = (uint8_t)LL_USART_ReceiveData8(uart);
+    uint8_t const data = LL_USART_ReceiveData8(uart);
     if (CR & USART_CR1_RXNEIE) {
       uint8_t next = rx_head;
       if ((next + 1) != rx_tail) {
@@ -182,6 +183,7 @@ FAST_CODE_1 void USARTx_IRQ_handler(USART_TypeDef * uart)
 
   // Check if TX is enabled and TX Empty IRQ triggered
   if ((SR & (USART_SR_TXE)) && (CR & USART_CR1_TXEIE)) {
+    uart->ICR = (USART_CLEAR_TCF);
     //  Check if data available
     if (tx_head <= tx_tail)
       duplex_state_set(DUPLEX_RX);
@@ -393,10 +395,10 @@ static void uart_reset(USART_TypeDef * uart_ptr)
   }
 }
 
-
 static void usart_hw_init(USART_TypeDef *USARTx, uint32_t baud, uint32_t flags, uint8_t halfduplex)
 {
-  uint32_t pclk = SystemCoreClock / 2;
+  //uint32_t pclk = HAL_RCC_GetHCLKFreq() / 2;
+  uint32_t pclk = (uint32_t)(__LL_RCC_CALC_PCLK1_FREQ(HAL_RCC_GetHCLKFreq(), LL_RCC_GetAPB1Prescaler()));
 
   /* Reset UART peripheral */
   uart_reset(USARTx);
@@ -502,7 +504,7 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx)
   UART_CR_RX = UART_DR_RX;
   UART_CR_TX = UART_DR_TX;
 
-  if (0 <= pin_rx) {
+  if (!halfduplex && 0 <= pin_rx) {
     uart_ptr_rx = uart_peripheral_get(pin_rx);
     if (uart_ptr_rx && uart_ptr_rx != uart_ptr) {
       /* RX USART peripheral is not same as TX USART */
@@ -527,20 +529,35 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx)
   UART_handle_tx = uart_ptr;
   UART_handle_rx = uart_ptr_rx;
 
+  /* TX pin */
+  usart_pin_config(pin_tx, 1);
+  /* RX pin */
+  if (!halfduplex && 0 <= pin_rx)
+    usart_pin_config(pin_rx, 1);
+
   /* TX USART peripheral config */
   usart_hw_init(uart_ptr, baud, 0, halfduplex);
+
+  /* Enable RX by default */
+  duplex_state_set(DUPLEX_RX);
 
 #if defined(LL_USART_TXRX_SWAPPED)
   /* F3 can swap Rx and Tx pins */
   if (swapped) {
     LL_USART_SetTXRXSwap(uart_ptr, LL_USART_TXRX_SWAPPED);
+    //LL_USART_DisableOverrunDetect(uart_ptr);
+    LL_USART_EnableOverrunDetect(uart_ptr);
+    //LL_USART_DisableDMADeactOnRxErr(uart_ptr);
+    LL_USART_EnableDMADeactOnRxErr(uart_ptr);
     if (uart_ptr_rx != uart_ptr)
       LL_USART_SetTXRXSwap(uart_ptr_rx, LL_USART_TXRX_SWAPPED);
   }
+#else
+  (void)swapped;
 #endif
 
-  /* Enable RX by default */
-  duplex_state_set(DUPLEX_RX);
+  (void)uart_ptr_rx->RDR;
+  uart_clear();
 
   IRQn_Type irq = usart_get_irq(uart_ptr_rx);
   if (irq) {
@@ -555,13 +572,7 @@ void uart_init(uint32_t baud, int32_t pin_rx, int32_t pin_tx)
           NVIC_EncodePriority(NVIC_GetPriorityGrouping(), 2, 0));
       NVIC_EnableIRQ(irq);
     }
- }
-
-  /* TX pin */
-  usart_pin_config(pin_tx, halfduplex);
-  /* RX pin */
-  if (0 <= pin_rx)
-    usart_pin_config(pin_rx, 1);
+  }
 }
 
 
