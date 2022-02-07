@@ -33,7 +33,6 @@ jobs:
       - name: Build project
         run: |
           platformio platform update
-          mkdir -p ~/artifcats
           pio run
 
       - name: Pack Source Codes
