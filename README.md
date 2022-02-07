@@ -1,6 +1,6 @@
 This is open source firmware for the JHEMCU's [8CH Receiver PWM PPM SBUS 32bit Encoder Signal Conversion Module](https://a.aliexpress.com/_mPygQeo).
 
-Module based on clone of STM32F031K6U6 so firmware can be easily ported to work on similar MCUs.
+Module is based on clone of STM32F031K6U6 so firmware can be easily ported to work on similar MCUs.
 
 # preparing
 ### precompiled binaries
