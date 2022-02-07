@@ -394,7 +394,7 @@ int main(void)
 #if DEBUG_BUILD
   //__asm__("BKPT");
 #endif
-  //copy_functions_to_ram();
+  copy_functions_to_ram();
 
   /* MCU Configuration--------------------------------------------------------*/
 #if STM32F1
