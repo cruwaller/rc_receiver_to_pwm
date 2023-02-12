@@ -245,7 +245,7 @@ servo_timer_init(TIM_HandleTypeDef *handle, TIM_TypeDef * timer)
   enable_pclock((uint32_t)timer);
 
   handle->Instance = timer;
-  handle->Init.Prescaler = (2 * get_pclock_frequency((uint32_t)timer) / 1000000) - 1;
+  handle->Init.Prescaler = (get_pclock_frequency((uint32_t)timer) / 1000000) - 1;
   handle->Init.CounterMode = TIM_COUNTERMODE_UP;
   handle->Init.Period = 20000 - 1;
   handle->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
